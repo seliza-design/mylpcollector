@@ -216,12 +216,105 @@
 
         </div>
 
+                <!-- LOGIN AND REGISTRATION MODAL -->
+
+        <div class="modal-overlay" id="auth-modal">
+
+            <div class="auth-modal">
+
+                <button class="close-modal" id="close-modal">
+                    ×
+                </button>
+
+                <div class="auth-logo">K</div>
+
+                <h2 id="auth-title">Welcome to Kayou Vault</h2>
+
+                <p id="auth-subtitle">
+                    Log in to access your personal collection.
+                </p>
+
+                <div class="auth-tabs">
+
+                    <button class="auth-tab active" id="login-tab">
+                        Log In
+                    </button>
+
+                    <button class="auth-tab" id="signup-tab">
+                        Create Account
+                    </button>
+
+                </div>
+
+                <form id="auth-form">
+
+                    <div class="form-group" id="name-group">
+
+                        <label for="display-name">Display Name</label>
+
+                        <input
+                            type="text"
+                            id="display-name"
+                            placeholder="Your collector name"
+                            maxlength="40"
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="auth-email">Email Address</label>
+
+                        <input
+                            type="email"
+                            id="auth-email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="auth-password">Password</label>
+
+                        <input
+                            type="password"
+                            id="auth-password"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            minlength="8"
+                            required
+                        >
+
+                    </div>
+
+                    <p class="auth-message" id="auth-message"
+                       role="status" aria-live="polite"></p>
+
+                    <button type="submit" class="auth-submit"
+                        id="auth-submit">
+                        Log In
+                    </button>
+
+                </form>
+
+                <p class="auth-disclaimer">
+                    Your personal collection is private to your account.
+                </p>
+
+            </div>
+
+        </div>
+
         <footer>
             <p>KAYOU VAULT 2026 · Made for my dearest friends</p>
         </footer>
 
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 
 </body>
