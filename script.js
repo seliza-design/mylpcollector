@@ -6,74 +6,137 @@
 const SUPABASE_URL = "https://qgkvmyulbmpjkdbfoyft.supabase.co";
 const SUPABASE_KEY = "sb_publishable_vtPNz-gXNLjZoVjRHqHTng_E4SKjMWe";
 
+
 const { createClient } = window.supabase;
 
-const supabaseClient = createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
 // ============================================
-// CURRENT USER
+// CURRENT USER AND DATA
 // ============================================
 
 let currentUser = null;
 let authMode = "login";
 
-
-// ============================================
-// TEMPORARY SAMPLE CARD DATABASE
-// ============================================
-
-const cards = [
-    { id: 1, name: "Twilight Sparkle", number: "DEMO-001", rarity: "SSR", color: "purple" },
-    { id: 2, name: "Pinkie Pie", number: "DEMO-002", rarity: "SR", color: "pink" },
-    { id: 3, name: "Rainbow Dash", number: "DEMO-003", rarity: "UR", color: "blue" },
-    { id: 4, name: "Fluttershy", number: "DEMO-004", rarity: "R", color: "yellow" },
-    { id: 5, name: "Rarity", number: "DEMO-005", rarity: "SSR", color: "purple" },
-    { id: 6, name: "Applejack", number: "DEMO-006", rarity: "SR", color: "yellow" }
-];
-
-
-// ============================================
-// TEMPORARY LOCAL COLLECTION STORAGE
-// ============================================
-
+let cards = [];
 let collection = {};
 let wishlist = [];
 
-function loadData() {
+let dataLoadVersion = 0;
 
-    const storageId = currentUser
-        ? currentUser.id
-        : "guest";
 
-    collection = JSON.parse(
-        localStorage.getItem("kayouCollection_" + storageId) || "{}"
-    );
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-    wishlist = JSON.parse(
-        localStorage.getItem("kayouWishlist_" + storageId) || "[]"
-    );
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function getCardColor(name) {
+
+    const colors = {
+        "Twilight Sparkle": "purple",
+        "Pinkie Pie": "pink",
+        "Rainbow Dash": "blue",
+        "Fluttershy": "yellow",
+        "Rarity": "purple",
+        "Applejack": "yellow"
+    };
+
+    return colors[name] || "purple";
+}
+
+
+// ============================================
+// LOAD CARD DATABASE FROM SUPABASE
+// ============================================
+
+async function loadCards() {
+
+    const { data, error } = await supabaseClient
+        .from("cards")
+        .select("*")
+        .order("id");
+
+    if (error) throw error;
+
+    cards = data.map(card => ({
+        id: card.id,
+        name: card.card_name,
+        number: card.card_number,
+        rarity: card.rarity || "Unknown",
+        character: card.character_name || "",
+        language: card.language || "Unknown",
+        seriesId: card.series_id,
+        imageUrl: card.image_url,
+        variant: card.variant,
+        color: getCardColor(card.character_name || card.card_name)
+    }));
 
 }
 
-function saveData() {
 
-    const storageId = currentUser
-        ? currentUser.id
-        : "guest";
+// ============================================
+// LOAD USER COLLECTION AND WISHLIST
+// ============================================
 
-    localStorage.setItem(
-        "kayouCollection_" + storageId,
-        JSON.stringify(collection)
-    );
+async function loadUserData() {
 
-    localStorage.setItem(
-        "kayouWishlist_" + storageId,
-        JSON.stringify(wishlist)
-    );
+    const version = ++dataLoadVersion;
+
+    if (!currentUser) {
+
+        collection = {};
+        wishlist = [];
+
+        renderAll();
+        return;
+
+    }
+
+    const userId = currentUser.id;
+
+    const [collectionResult, wishlistResult] = await Promise.all([
+
+        supabaseClient
+            .from("collections")
+            .select("card_id, quantity")
+            .eq("user_id", userId),
+
+        supabaseClient
+            .from("wishlists")
+            .select("card_id")
+            .eq("user_id", userId)
+
+    ]);
+
+    if (collectionResult.error) throw collectionResult.error;
+
+    if (wishlistResult.error) throw wishlistResult.error;
+
+    // Ignore results if the user changed while loading.
+    if (version !== dataLoadVersion || !currentUser ||
+        currentUser.id !== userId) {
+        return;
+    }
+
+    collection = {};
+
+    collectionResult.data.forEach(item => {
+        collection[item.card_id] = item.quantity;
+    });
+
+    wishlist = wishlistResult.data.map(item => item.card_id);
+
+    renderAll();
 
 }
 
@@ -248,7 +311,7 @@ document.getElementById("auth-form").addEventListener(
                 } else {
 
                     message.textContent =
-                        "Account created! Please check your email and click the confirmation link before logging in.";
+                        "Account created! Please check your email and confirm your account.";
 
                 }
 
@@ -256,7 +319,7 @@ document.getElementById("auth-form").addEventListener(
 
             } else {
 
-                const { data, error } =
+                const { error } =
                     await supabaseClient.auth.signInWithPassword({
 
                         email: email,
@@ -348,11 +411,12 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
     currentUser = session ? session.user : null;
 
-    loadData();
-
     updateAuthDisplay();
 
-    renderAll();
+    loadUserData().catch(error => {
+        console.error("Could not load account data:", error);
+        alert("There was a problem loading your collection: " + error.message);
+    });
 
 });
 
@@ -437,15 +501,23 @@ function createCardHTML(card, mode = "database") {
     return `
         <div class="card-item">
 
-            <div class="card-art ${card.color}">✦</div>
+            <div class="card-art ${escapeHTML(card.color)}">✦</div>
 
             <div class="card-info">
 
-                <h3>${card.name}</h3>
+                <h3>${escapeHTML(card.name)}</h3>
 
-                <p>Card No. ${card.number}</p>
+                <p>Card No. ${escapeHTML(card.number)}</p>
 
-                <span class="rarity">${card.rarity}</span>
+                <span class="rarity">${escapeHTML(card.rarity)}</span>
+
+                <p style="margin-top:8px">
+                    Language: ${escapeHTML(card.language)}
+                </p>
+
+                ${card.variant ? `
+                    <p>Variant: ${escapeHTML(card.variant)}</p>
+                ` : ""}
 
                 ${mode !== "database" ? `
                     <p style="margin-top:10px">
@@ -466,43 +538,109 @@ function createCardHTML(card, mode = "database") {
 
 
 // ============================================
-// ADD AND REMOVE CARDS
+// ADD CARDS TO COLLECTION
 // ============================================
 
-function addCard(id) {
+async function addCard(id) {
 
     if (!currentUser) {
         openAuthModal("login");
         return;
     }
 
-    collection[id] = (collection[id] || 0) + 1;
+    const newQuantity = (collection[id] || 0) + 1;
 
-    wishlist = wishlist.filter(cardId => cardId !== id);
+    const { error } = await supabaseClient
+        .from("collections")
+        .upsert({
 
-    saveData();
+            user_id: currentUser.id,
+            card_id: id,
+            quantity: newQuantity
+
+        }, {
+            onConflict: "user_id,card_id"
+        });
+
+    if (error) {
+        alert("Could not add card: " + error.message);
+        return;
+    }
+
+    collection[id] = newQuantity;
+
+    // Remove this card from the wishlist if it was there.
+    if (wishlist.includes(id)) {
+
+        const { error: wishlistError } = await supabaseClient
+            .from("wishlists")
+            .delete()
+            .eq("user_id", currentUser.id)
+            .eq("card_id", id);
+
+        if (wishlistError) {
+            alert("Card added, but wishlist update failed: " + wishlistError.message);
+        } else {
+            wishlist = wishlist.filter(cardId => cardId !== id);
+        }
+
+    }
 
     renderAll();
 
 }
 
 
-function changeQuantity(id, amount) {
+// ============================================
+// CHANGE CARD QUANTITY
+// ============================================
+
+async function changeQuantity(id, amount) {
 
     if (!currentUser) {
         openAuthModal("login");
         return;
     }
 
-    let quantity = (collection[id] || 0) + amount;
+    const quantity = (collection[id] || 0) + amount;
 
     if (quantity <= 0) {
-        delete collection[id];
-    } else {
-        collection[id] = quantity;
-    }
 
-    saveData();
+        const { error } = await supabaseClient
+            .from("collections")
+            .delete()
+            .eq("user_id", currentUser.id)
+            .eq("card_id", id);
+
+        if (error) {
+            alert("Could not remove card: " + error.message);
+            return;
+        }
+
+        delete collection[id];
+
+    } else {
+
+        const { error } = await supabaseClient
+            .from("collections")
+            .upsert({
+
+                user_id: currentUser.id,
+                card_id: id,
+                quantity: quantity
+
+            }, {
+                onConflict: "user_id,card_id"
+            });
+
+        if (error) {
+            alert("Could not update quantity: " + error.message);
+            return;
+        }
+
+        collection[id] = quantity;
+
+    }
 
     renderAll();
 
@@ -513,31 +651,60 @@ function changeQuantity(id, amount) {
 // WISHLIST
 // ============================================
 
-function addWishlist(id) {
+async function addWishlist(id) {
 
     if (!currentUser) {
         openAuthModal("login");
         return;
     }
 
-    if (!wishlist.includes(id) && !collection[id]) {
-
-        wishlist.push(id);
-
-        saveData();
-
-        renderAll();
-
+    if (wishlist.includes(id) || collection[id]) {
+        return;
     }
+
+    const { error } = await supabaseClient
+        .from("wishlists")
+        .upsert({
+
+            user_id: currentUser.id,
+            card_id: id
+
+        }, {
+            onConflict: "user_id,card_id",
+            ignoreDuplicates: true
+        });
+
+    if (error) {
+        alert("Could not add to wishlist: " + error.message);
+        return;
+    }
+
+    wishlist.push(id);
+
+    renderAll();
 
 }
 
 
-function removeWishlist(id) {
+async function removeWishlist(id) {
+
+    if (!currentUser) {
+        openAuthModal("login");
+        return;
+    }
+
+    const { error } = await supabaseClient
+        .from("wishlists")
+        .delete()
+        .eq("user_id", currentUser.id)
+        .eq("card_id", id);
+
+    if (error) {
+        alert("Could not remove wishlist card: " + error.message);
+        return;
+    }
 
     wishlist = wishlist.filter(cardId => cardId !== id);
-
-    saveData();
 
     renderAll();
 
@@ -559,7 +726,8 @@ function renderDatabase() {
 
         const matchesSearch =
             card.name.toLowerCase().includes(search) ||
-            card.number.toLowerCase().includes(search);
+            card.number.toLowerCase().includes(search) ||
+            card.character.toLowerCase().includes(search);
 
         const matchesRarity =
             rarity === "" || card.rarity === rarity;
@@ -751,11 +919,52 @@ function renderAll() {
 
 
 // ============================================
+// SEARCH LISTENER
+// ============================================
+
+document.getElementById("search-input").addEventListener("input", () => {
+    renderDatabase();
+});
+
+document.getElementById("rarity-filter").addEventListener("change", () => {
+    renderDatabase();
+});
+
+
+// ============================================
 // INITIALIZE
 // ============================================
 
-loadData();
+async function initializeApp() {
 
-renderAll();
+    renderAll();
 
-updateAuthDisplay();
+    updateAuthDisplay();
+
+    try {
+
+        await loadCards();
+
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) throw error;
+
+        currentUser = data.session ? data.session.user : null;
+
+        updateAuthDisplay();
+
+        await loadUserData();
+
+        renderAll();
+
+    } catch (error) {
+
+        console.error("Kayou Vault initialization error:", error);
+
+        alert("Kayou Vault could not load its data: " + error.message);
+
+    }
+
+}
+
+initializeApp();
