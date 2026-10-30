@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayou Vault | My Little Pony Card Collection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">K</div>
+            <div>
+                <h2>KAYOU VAULT</h2>
+                <span>MY LITTLE PONY COLLECTION</span>
+            </div>
+        </div>
+
+        <div class="nav-label">MENU</div>
+
+        <nav>
+            <button class="nav-item active" data-page="home">⌂ Dashboard</button>
+            <button class="nav-item" data-page="database">▦ Card Database</button>
+            <button class="nav-item" data-page="collection">▣ My Collection</button>
+            <button class="nav-item" data-page="duplicates">⧉ Duplicates</button>
+            <button class="nav-item" data-page="wishlist">♡ Wishlist</button>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="sidebar-note">
+                <span>✦</span>
+                <p>Your collection, organized.</p>
+            </div>
+            <button class="nav-item" data-page="profile">⚙ Settings</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <span class="breadcrumb">KAYOU VAULT /</span>
+                <span id="page-name">DASHBOARD</span>
+            </div>
+
+            <div class="topbar-right">
+                <button class="login-button" id="login-button">
+                    Log in / Sign up
+                </button>
+            </div>
+        </header>
+
+        <div class="content">
+
+            <!-- DASHBOARD -->
+
+            <section class="page active" id="home">
+
+                <div class="welcome">
+                    <div>
+                        <span class="eyebrow">YOUR COLLECTION SPACE</span>
+                        <h1>Welcome to Kayou Vault.</h1>
+                        <p>Keep track of every pony, every card, and every collection.</p>
+                    </div>
+                    <div class="welcome-decoration">✦</div>
+                </div>
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <span class="stat-icon">▦</span>
+                        <p>Total Cards Owned</p>
+                        <h2 id="total-owned">0</h2>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">✧</span>
+                        <p>Unique Cards</p>
+                        <h2 id="unique-owned">0</h2>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">⧉</span>
+                        <p>Duplicates</p>
+                        <h2 id="duplicate-total">0</h2>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon">♡</span>
+                        <p>Wishlist</p>
+                        <h2 id="wishlist-total">0</h2>
+                    </div>
+
+                </div>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Recently Added</h2>
+                        <p>Your latest collection additions.</p>
+                    </div>
+                    <button class="text-button" data-page="collection">View Collection →</button>
+                </div>
+
+                <div id="recent-cards" class="card-grid">
+                    <div class="empty-state">
+                        <span>✧</span>
+                        <h3>Your collection starts here</h3>
+                        <p>Visit the card database to start adding cards.</p>
+                        <button class="primary-button" data-page="database">Explore Cards</button>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- CARD DATABASE -->
+
+            <section class="page" id="database">
+
+                <div class="page-heading">
+                    <span class="eyebrow">EXPLORE THE CATALOG</span>
+                    <h1>Card Database</h1>
+                    <p>Browse and search the Kayou My Little Pony card catalog.</p>
+                </div>
+
+                <div class="search-area">
+                    <input type="text" id="search-input"
+                        placeholder="Search by character, card name, or card number...">
+
+                    <select id="rarity-filter">
+                        <option value="">All Rarities</option>
+                        <option value="UR">UR</option>
+                        <option value="SSR">SSR</option>
+                        <option value="SR">SR</option>
+                        <option value="R">R</option>
+                    </select>
+                </div>
+
+                <p class="demo-notice">
+                    ✦ Preview catalog — sample entries are placeholders, not verified Kayou card records.
+                </p>
+
+                <div id="database-grid" class="card-grid"></div>
+
+            </section>
+
+
+            <!-- MY COLLECTION -->
+
+            <section class="page" id="collection">
+
+                <div class="page-heading">
+                    <span class="eyebrow">YOUR PERSONAL INVENTORY</span>
+                    <h1>My Collection</h1>
+                    <p>All the cards you've added to your collection.</p>
+                </div>
+
+                <div class="collection-summary">
+                    <span id="collection-description">0 unique cards in your collection</span>
+                </div>
+
+                <div id="collection-grid" class="card-grid"></div>
+
+            </section>
+
+
+            <!-- DUPLICATES -->
+
+            <section class="page" id="duplicates">
+
+                <div class="page-heading">
+                    <span class="eyebrow">EXTRA COPIES</span>
+                    <h1>Duplicates</h1>
+                    <p>Keep track of the extra copies in your collection.</p>
+                </div>
+
+                <div id="duplicates-grid" class="card-grid"></div>
+
+            </section>
+
+
+            <!-- WISHLIST -->
+
+            <section class="page" id="wishlist">
+
+                <div class="page-heading">
+                    <span class="eyebrow">YOUR WANT LIST</span>
+                    <h1>Wishlist</h1>
+                    <p>Keep track of the cards you're still looking for.</p>
+                </div>
+
+                <div id="wishlist-grid" class="card-grid"></div>
+
+            </section>
+
+
+            <!-- PROFILE -->
+
+            <section class="page" id="profile">
+
+                <div class="page-heading">
+                    <span class="eyebrow">ACCOUNT</span>
+                    <h1>Settings</h1>
+                    <p>Manage your Kayou Vault account.</p>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Account Information</h3>
+                    <p>Account registration and login will be connected through Supabase in a later development step.</p>
+                    <button class="primary-button" id="settings-login">Log in / Sign up</button>
+                </div>
+
+            </section>
+
+        </div>
+
+        <footer>
+            <p>KAYOU VAULT 2026 · Made for my dearest friends</p>
+        </footer>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
