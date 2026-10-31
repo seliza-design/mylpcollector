@@ -22,7 +22,8 @@ let series = [];
 let collection = {};
 let wishlist = [];
 
-let activeSeriesName = "";
+let activeCardType = "";
+let activeSeriesId = "";
 let dataLoadVersion = 0;
 
 
@@ -512,7 +513,7 @@ function showPage(pageName, selectedButton = null) {
         selectedButton.classList.add("active");
     } else {
         const matchingButton = document.querySelector(
-            `.nav-item[data-page="${pageName}"]:not([data-series-name])`
+            `.nav-item[data-page="${pageName}"]`
         );
 
         if (matchingButton) {
@@ -529,6 +530,25 @@ function showPage(pageName, selectedButton = null) {
 
 }
 
+document.querySelectorAll(".nav-item[data-page]").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        if (button.dataset.page === "database") {
+
+            activeCardType = "";
+            activeSeriesId = "";
+
+            updateCatalogButtons();
+            renderDatabase();
+
+        }
+
+        showPage(button.dataset.page, button);
+
+    });
+
+});
 
 // ============================================
 // NAVIGATION BUTTON EVENTS
@@ -567,46 +587,91 @@ document.querySelectorAll("[data-page]").forEach(button => {
 
 
 // ============================================
-// SERIES FILTER
+// COLLECTION BUTTONS
 // ============================================
 
-function updateSeriesFilter() {
+function updateCatalogButtons() {
 
-    const seriesFilter = document.getElementById("series-filter");
+    const container = document.getElementById("collection-buttons");
 
-    if (!seriesFilter) return;
-
-    const selectedType =
-        document.getElementById("card-type-filter").value;
-
-    const previousValue = seriesFilter.value;
+    if (!container) return;
 
     const filteredSeries = series.filter(item => {
 
-        return !selectedType ||
-            item.card_type === selectedType;
+        return !activeCardType ||
+            item.card_type === activeCardType;
 
     });
 
-    seriesFilter.innerHTML = `
-        <option value="">All Collections</option>
-        ${filteredSeries.map(item => `
-            <option value="${item.id}">
-                ${escapeHTML(item.series_name)}
-            </option>
-        `).join("")}
-    `;
+    if (filteredSeries.length === 0) {
 
-    if (
-        filteredSeries.some(item =>
-            String(item.id) === previousValue
-        )
-    ) {
-        seriesFilter.value = previousValue;
+        container.innerHTML = `
+            <p class="collection-placeholder">
+                No collections have been added yet.
+            </p>
+        `;
+
+        return;
+
     }
+
+    container.innerHTML = filteredSeries.map(item => `
+
+        <button
+            class="collection-button ${
+                String(item.id) === String(activeSeriesId)
+                    ? "active"
+                    : ""
+            }"
+            data-series-id="${item.id}"
+        >
+            ${escapeHTML(item.series_name)}
+        </button>
+
+    `).join("");
+
+    container.querySelectorAll(".collection-button").forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            activeSeriesId = button.dataset.seriesId;
+
+            updateCatalogButtons();
+
+            renderDatabase();
+
+        });
+
+    });
 
 }
 
+
+// ============================================
+// CARD TYPE BUTTONS
+// ============================================
+
+document.querySelectorAll(".catalog-type").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        activeCardType = button.dataset.type;
+
+        activeSeriesId = "";
+
+        document.querySelectorAll(".catalog-type").forEach(item => {
+            item.classList.remove("active");
+        });
+
+        button.classList.add("active");
+
+        updateCatalogButtons();
+
+        renderDatabase();
+
+    });
+
+});
 
 // ============================================
 // CARD DISPLAY
@@ -924,10 +989,6 @@ function renderDatabase() {
 
     const rarity = document.getElementById("rarity-filter").value;
 
-    const cardType = document.getElementById("card-type-filter").value;
-
-    const seriesId = document.getElementById("series-filter").value;
-
     const filteredCards = cards.filter(card => {
 
         const matchesSearch =
@@ -940,27 +1001,51 @@ function renderDatabase() {
             rarity === "" || card.rarity === rarity;
 
         const matchesType =
-            cardType === "" || card.cardType === cardType;
+            activeCardType === "" ||
+            card.cardType === activeCardType;
 
         const matchesSeries =
-            seriesId === "" ||
-            String(card.seriesId) === seriesId;
-
-        const matchesSidebarSeries =
-            activeSeriesName === "" ||
-            card.seriesName.toLowerCase().includes(
-                activeSeriesName.toLowerCase()
-            );
+            activeSeriesId === "" ||
+            String(card.seriesId) === String(activeSeriesId);
 
         return (
             matchesSearch &&
             matchesRarity &&
             matchesType &&
-            matchesSeries &&
-            matchesSidebarSeries
+            matchesSeries
         );
 
     });
+
+    const title = document.getElementById("catalog-results-title");
+
+    const count = document.getElementById("catalog-results-count");
+
+    if (activeSeriesId) {
+
+        const selectedSeries = series.find(item =>
+            String(item.id) === String(activeSeriesId)
+        );
+
+        title.textContent = selectedSeries
+            ? selectedSeries.series_name
+            : "Selected Collection";
+
+    } else if (activeCardType === "collectible") {
+
+        title.textContent = "Collectible Cards";
+
+    } else if (activeCardType === "tcg") {
+
+        title.textContent = "Trading Card Game";
+
+    } else {
+
+        title.textContent = "All Cards";
+
+    }
+
+    count.textContent = `${filteredCards.length} cards`;
 
     document.getElementById("database-grid").innerHTML =
 
@@ -973,12 +1058,11 @@ function renderDatabase() {
             : `
                 <div class="empty-state">
                     <h3>No cards found</h3>
-                    <p>Try another search or collection filter.</p>
+                    <p>There are no cards in this selection yet.</p>
                 </div>
             `;
 
 }
-
 
 // ============================================
 // PERSONAL COLLECTION
@@ -1157,7 +1241,7 @@ function renderAll() {
 
 
 // ============================================
-// SEARCH AND FILTER LISTENERS
+// SEARCH LISTENERS
 // ============================================
 
 document.getElementById("search-input").addEventListener(
@@ -1165,41 +1249,10 @@ document.getElementById("search-input").addEventListener(
     renderDatabase
 );
 
-
 document.getElementById("rarity-filter").addEventListener(
     "change",
     renderDatabase
 );
-
-
-document.getElementById("card-type-filter").addEventListener(
-    "change",
-    () => {
-
-        activeSeriesName = "";
-
-        updateSeriesFilter();
-
-        document.getElementById("series-filter").value = "";
-
-        renderDatabase();
-
-    }
-);
-
-
-document.getElementById("series-filter").addEventListener(
-    "change",
-    () => {
-
-        activeSeriesName = "";
-
-        renderDatabase();
-
-    }
-);
-
-
 // ============================================
 // INITIALIZE APPLICATION
 // ============================================
@@ -1215,6 +1268,8 @@ async function initializeApp() {
         await loadSeries();
 
         await loadCards();
+
+        updateCatalogButtons();
 
         const { data, error } =
             await supabaseClient.auth.getSession();
