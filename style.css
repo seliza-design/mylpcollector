@@ -739,3 +739,66 @@ footer {
         padding: 28px 22px;
     }
 }
+
+/* ============================================
+   KAYOU VAULT - CATALOG LAYOUT
+============================================ */
+
+.catalog-section {
+    margin-top: 35px;
+}
+
+.catalog-type-buttons,
+.collection-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.catalog-type,
+.collection-button {
+    padding: 12px 20px;
+    border: 1px solid var(--border-color, #e5d8f3);
+    border-radius: 12px;
+    background: white;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s ease;
+}
+
+.catalog-type:hover,
+.collection-button:hover {
+    transform: translateY(-2px);
+    border-color: #a78bfa;
+}
+
+.catalog-type.active,
+.collection-button.active {
+    background: #eee7ff;
+    border-color: #a78bfa;
+    color: #7651b5;
+    font-weight: 600;
+}
+
+.collection-placeholder {
+    opacity: 0.65;
+    font-size: 14px;
+}
+
+.catalog-results-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 40px 0 18px;
+}
+
+.catalog-results-heading h2 {
+    margin: 0;
+}
+
+#catalog-results-count {
+    font-size: 13px;
+    opacity: 0.65;
+}
