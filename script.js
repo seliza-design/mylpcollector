@@ -6,9 +6,7 @@
 const SUPABASE_URL = "https://qgkvmyulbmpjkdbfoyft.supabase.co";
 const SUPABASE_KEY = "sb_publishable_vtPNz-gXNLjZoVjRHqHTng_E4SKjMWe";
 
-
 const { createClient } = window.supabase;
-
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
@@ -20,9 +18,11 @@ let currentUser = null;
 let authMode = "login";
 
 let cards = [];
+let series = [];
 let collection = {};
 let wishlist = [];
 
+let activeSeriesName = "";
 let dataLoadVersion = 0;
 
 
@@ -40,6 +40,7 @@ function escapeHTML(value) {
     })[character]);
 }
 
+
 function getCardColor(name) {
 
     const colors = {
@@ -56,6 +57,25 @@ function getCardColor(name) {
 
 
 // ============================================
+// LOAD SERIES FROM SUPABASE
+// ============================================
+
+async function loadSeries() {
+
+    const { data, error } = await supabaseClient
+        .from("series")
+        .select("*")
+        .order("series_name");
+
+    if (error) throw error;
+
+    series = data || [];
+
+    updateSeriesFilter();
+}
+
+
+// ============================================
 // LOAD CARD DATABASE FROM SUPABASE
 // ============================================
 
@@ -63,24 +83,52 @@ async function loadCards() {
 
     const { data, error } = await supabaseClient
         .from("cards")
-        .select("*")
+        .select(`
+            *,
+            series (
+                series_name,
+                card_type,
+                language,
+                region
+            )
+        `)
         .order("id");
 
     if (error) throw error;
 
-    cards = data.map(card => ({
+    cards = (data || []).map(card => ({
+
         id: card.id,
+
         name: card.card_name,
+
         number: card.card_number,
+
         rarity: card.rarity || "Unknown",
+
         character: card.character_name || "",
+
         language: card.language || "Unknown",
+
         seriesId: card.series_id,
+
+        seriesName: card.series?.series_name || "Unassigned",
+
+        cardType: card.card_type || card.series?.card_type || "collectible",
+
+        region: card.region || card.series?.region || "",
+
         imageUrl: card.image_url,
+
         variant: card.variant,
-        color: getCardColor(card.character_name || card.card_name)
+
+        color: getCardColor(
+            card.character_name || card.card_name
+        )
+
     }));
 
+    updateSeriesFilter();
 }
 
 
@@ -122,9 +170,11 @@ async function loadUserData() {
 
     if (wishlistResult.error) throw wishlistResult.error;
 
-    // Ignore results if the user changed while loading.
-    if (version !== dataLoadVersion || !currentUser ||
-        currentUser.id !== userId) {
+    if (
+        version !== dataLoadVersion ||
+        !currentUser ||
+        currentUser.id !== userId
+    ) {
         return;
     }
 
@@ -137,7 +187,6 @@ async function loadUserData() {
     wishlist = wishlistResult.data.map(item => item.card_id);
 
     renderAll();
-
 }
 
 
@@ -147,6 +196,7 @@ async function loadUserData() {
 
 const authModal = document.getElementById("auth-modal");
 
+
 function openAuthModal(mode = "login") {
 
     authModal.classList.add("show");
@@ -154,11 +204,13 @@ function openAuthModal(mode = "login") {
 
 }
 
+
 function closeAuthModal() {
 
     authModal.classList.remove("show");
 
 }
+
 
 document.getElementById("login-button").addEventListener("click", () => {
 
@@ -170,6 +222,7 @@ document.getElementById("login-button").addEventListener("click", () => {
 
 });
 
+
 document.getElementById("settings-login").addEventListener("click", () => {
 
     if (currentUser) {
@@ -180,10 +233,12 @@ document.getElementById("settings-login").addEventListener("click", () => {
 
 });
 
+
 document.getElementById("close-modal").addEventListener(
     "click",
     closeAuthModal
 );
+
 
 authModal.addEventListener("click", event => {
 
@@ -208,7 +263,9 @@ function setAuthMode(mode) {
         loginMode ? "none" : "block";
 
     document.getElementById("auth-title").textContent =
-        loginMode ? "Welcome to Kayou Vault" : "Create Your Account";
+        loginMode
+            ? "Welcome to Kayou Vault"
+            : "Create Your Account";
 
     document.getElementById("auth-subtitle").textContent =
         loginMode
@@ -235,9 +292,11 @@ function setAuthMode(mode) {
 
 }
 
+
 document.getElementById("login-tab").addEventListener("click", () => {
     setAuthMode("login");
 });
+
 
 document.getElementById("signup-tab").addEventListener("click", () => {
     setAuthMode("signup");
@@ -279,7 +338,9 @@ document.getElementById("auth-form").addEventListener(
                 }
 
                 if (password.length < 8) {
-                    throw new Error("Your password must be at least 8 characters.");
+                    throw new Error(
+                        "Your password must be at least 8 characters."
+                    );
                 }
 
                 const { data, error } = await supabaseClient.auth.signUp({
@@ -414,8 +475,14 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
     updateAuthDisplay();
 
     loadUserData().catch(error => {
+
         console.error("Could not load account data:", error);
-        alert("There was a problem loading your collection: " + error.message);
+
+        alert(
+            "There was a problem loading your collection: " +
+            error.message
+        );
+
     });
 
 });
@@ -425,7 +492,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 // NAVIGATION
 // ============================================
 
-function showPage(pageName) {
+function showPage(pageName, selectedButton = null) {
 
     document.querySelectorAll(".page").forEach(page => {
         page.classList.remove("active");
@@ -435,11 +502,23 @@ function showPage(pageName) {
         button.classList.remove("active");
     });
 
-    document.getElementById(pageName).classList.add("active");
+    const targetPage = document.getElementById(pageName);
 
-    document.querySelectorAll(`[data-page="${pageName}"]`).forEach(button => {
-        button.classList.add("active");
-    });
+    if (!targetPage) return;
+
+    targetPage.classList.add("active");
+
+    if (selectedButton) {
+        selectedButton.classList.add("active");
+    } else {
+        const matchingButton = document.querySelector(
+            `.nav-item[data-page="${pageName}"]:not([data-series-name])`
+        );
+
+        if (matchingButton) {
+            matchingButton.classList.add("active");
+        }
+    }
 
     document.getElementById("page-name").textContent =
         pageName.toUpperCase();
@@ -450,13 +529,83 @@ function showPage(pageName) {
 
 }
 
+
+// ============================================
+// NAVIGATION BUTTON EVENTS
+// ============================================
+
 document.querySelectorAll("[data-page]").forEach(button => {
 
     button.addEventListener("click", () => {
-        showPage(button.dataset.page);
+
+        const pageName = button.dataset.page;
+
+        if (pageName === "database") {
+
+            const cardType = button.dataset.cardType || "";
+
+            activeSeriesName = button.dataset.seriesName || "";
+
+            document.getElementById("card-type-filter").value =
+                cardType;
+
+            updateSeriesFilter();
+
+            document.getElementById("series-filter").value = "";
+
+            document.getElementById("search-input").value = "";
+
+            document.getElementById("rarity-filter").value = "";
+
+        }
+
+        showPage(pageName, button);
+
     });
 
 });
+
+
+// ============================================
+// SERIES FILTER
+// ============================================
+
+function updateSeriesFilter() {
+
+    const seriesFilter = document.getElementById("series-filter");
+
+    if (!seriesFilter) return;
+
+    const selectedType =
+        document.getElementById("card-type-filter").value;
+
+    const previousValue = seriesFilter.value;
+
+    const filteredSeries = series.filter(item => {
+
+        return !selectedType ||
+            item.card_type === selectedType;
+
+    });
+
+    seriesFilter.innerHTML = `
+        <option value="">All Collections</option>
+        ${filteredSeries.map(item => `
+            <option value="${item.id}">
+                ${escapeHTML(item.series_name)}
+            </option>
+        `).join("")}
+    `;
+
+    if (
+        filteredSeries.some(item =>
+            String(item.id) === previousValue
+        )
+    ) {
+        seriesFilter.value = previousValue;
+    }
+
+}
 
 
 // ============================================
@@ -472,8 +621,13 @@ function createCardHTML(card, mode = "database") {
     if (mode === "database") {
 
         actions = `
-            <button onclick="addCard(${card.id})">+ Add Card</button>
-            <button onclick="addWishlist(${card.id})">♡ Wishlist</button>
+            <button onclick="addCard(${card.id})">
+                + Add Card
+            </button>
+
+            <button onclick="addWishlist(${card.id})">
+                ♡ Wishlist
+            </button>
         `;
 
     }
@@ -481,8 +635,13 @@ function createCardHTML(card, mode = "database") {
     if (mode === "collection" || mode === "duplicates") {
 
         actions = `
-            <button onclick="changeQuantity(${card.id}, 1)">+ Add</button>
-            <button onclick="changeQuantity(${card.id}, -1)">− Remove</button>
+            <button onclick="changeQuantity(${card.id}, 1)">
+                + Add
+            </button>
+
+            <button onclick="changeQuantity(${card.id}, -1)">
+                − Remove
+            </button>
         `;
 
     }
@@ -490,18 +649,35 @@ function createCardHTML(card, mode = "database") {
     if (mode === "wishlist") {
 
         actions = `
-            <button onclick="addCard(${card.id})">+ Add to Collection</button>
-            <button class="remove-button" onclick="removeWishlist(${card.id})">
+            <button onclick="addCard(${card.id})">
+                + Add to Collection
+            </button>
+
+            <button class="remove-button"
+                onclick="removeWishlist(${card.id})">
                 Remove
             </button>
         `;
 
     }
 
+    const artwork = card.imageUrl
+        ? `
+            <img
+                src="${escapeHTML(card.imageUrl)}"
+                alt="${escapeHTML(card.name)}"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+            >
+            <span style="display:none;">✦</span>
+        `
+        : `<span>✦</span>`;
+
     return `
         <div class="card-item">
 
-            <div class="card-art ${escapeHTML(card.color)}">✦</div>
+            <div class="card-art ${escapeHTML(card.color)}">
+                ${artwork}
+            </div>
 
             <div class="card-info">
 
@@ -509,11 +685,31 @@ function createCardHTML(card, mode = "database") {
 
                 <p>Card No. ${escapeHTML(card.number)}</p>
 
-                <span class="rarity">${escapeHTML(card.rarity)}</span>
+                <span class="rarity">
+                    ${escapeHTML(card.rarity)}
+                </span>
 
                 <p style="margin-top:8px">
+                    Character: ${escapeHTML(card.character)}
+                </p>
+
+                <p>
+                    Collection: ${escapeHTML(card.seriesName)}
+                </p>
+
+                <p>
+                    Type: ${card.cardType === "tcg"
+                        ? "Trading Card Game"
+                        : "Collectible Card"}
+                </p>
+
+                <p>
                     Language: ${escapeHTML(card.language)}
                 </p>
+
+                ${card.region ? `
+                    <p>Region: ${escapeHTML(card.region)}</p>
+                ` : ""}
 
                 ${card.variant ? `
                     <p>Variant: ${escapeHTML(card.variant)}</p>
@@ -569,7 +765,6 @@ async function addCard(id) {
 
     collection[id] = newQuantity;
 
-    // Remove this card from the wishlist if it was there.
     if (wishlist.includes(id)) {
 
         const { error: wishlistError } = await supabaseClient
@@ -579,9 +774,16 @@ async function addCard(id) {
             .eq("card_id", id);
 
         if (wishlistError) {
-            alert("Card added, but wishlist update failed: " + wishlistError.message);
+
+            alert(
+                "Card added, but wishlist update failed: " +
+                wishlistError.message
+            );
+
         } else {
+
             wishlist = wishlist.filter(cardId => cardId !== id);
+
         }
 
     }
@@ -712,7 +914,7 @@ async function removeWishlist(id) {
 
 
 // ============================================
-// DATABASE SEARCH
+// DATABASE SEARCH AND FILTERING
 // ============================================
 
 function renderDatabase() {
@@ -722,17 +924,41 @@ function renderDatabase() {
 
     const rarity = document.getElementById("rarity-filter").value;
 
+    const cardType = document.getElementById("card-type-filter").value;
+
+    const seriesId = document.getElementById("series-filter").value;
+
     const filteredCards = cards.filter(card => {
 
         const matchesSearch =
             card.name.toLowerCase().includes(search) ||
             card.number.toLowerCase().includes(search) ||
-            card.character.toLowerCase().includes(search);
+            card.character.toLowerCase().includes(search) ||
+            card.seriesName.toLowerCase().includes(search);
 
         const matchesRarity =
             rarity === "" || card.rarity === rarity;
 
-        return matchesSearch && matchesRarity;
+        const matchesType =
+            cardType === "" || card.cardType === cardType;
+
+        const matchesSeries =
+            seriesId === "" ||
+            String(card.seriesId) === seriesId;
+
+        const matchesSidebarSeries =
+            activeSeriesName === "" ||
+            card.seriesName.toLowerCase().includes(
+                activeSeriesName.toLowerCase()
+            );
+
+        return (
+            matchesSearch &&
+            matchesRarity &&
+            matchesType &&
+            matchesSeries &&
+            matchesSidebarSeries
+        );
 
     });
 
@@ -744,10 +970,12 @@ function renderDatabase() {
                 createCardHTML(card, "database")
               ).join("")
 
-            : `<div class="empty-state">
+            : `
+                <div class="empty-state">
                     <h3>No cards found</h3>
-                    <p>Try another search.</p>
-               </div>`;
+                    <p>Try another search or collection filter.</p>
+                </div>
+            `;
 
 }
 
@@ -770,11 +998,13 @@ function renderCollection() {
                 createCardHTML(card, "collection")
               ).join("")
 
-            : `<div class="empty-state">
+            : `
+                <div class="empty-state">
                     <span>✧</span>
                     <h3>Your collection is empty</h3>
                     <p>Add cards from the database to get started.</p>
-               </div>`;
+                </div>
+            `;
 
     document.getElementById("collection-description").textContent =
         `${ownedCards.length} unique cards in your collection`;
@@ -800,11 +1030,13 @@ function renderDuplicates() {
                 createCardHTML(card, "duplicates")
               ).join("")
 
-            : `<div class="empty-state">
+            : `
+                <div class="empty-state">
                     <span>⧉</span>
                     <h3>No duplicates yet</h3>
                     <p>Cards with multiple copies will appear here.</p>
-               </div>`;
+                </div>
+            `;
 
 }
 
@@ -827,11 +1059,13 @@ function renderWishlist() {
                 createCardHTML(card, "wishlist")
               ).join("")
 
-            : `<div class="empty-state">
+            : `
+                <div class="empty-state">
                     <span>♡</span>
                     <h3>Your wishlist is empty</h3>
                     <p>Add cards you're hoping to collect.</p>
-               </div>`;
+                </div>
+            `;
 
 }
 
@@ -845,13 +1079,15 @@ function renderDashboard() {
     const quantities = Object.values(collection);
 
     const total = quantities.reduce(
-        (sum, quantity) => sum + quantity, 0
+        (sum, quantity) => sum + quantity,
+        0
     );
 
     const unique = quantities.length;
 
     const duplicates = quantities.reduce(
-        (sum, quantity) => sum + Math.max(0, quantity - 1), 0
+        (sum, quantity) => sum + Math.max(0, quantity - 1),
+        0
     );
 
     document.getElementById("total-owned").textContent = total;
@@ -879,19 +1115,21 @@ function renderDashboard() {
                 createCardHTML(card, "collection")
               ).join("")
 
-            : `<div class="empty-state">
+            : `
+                <div class="empty-state">
                     <span>✧</span>
                     <h3>Your collection starts here</h3>
                     <p>Visit the card database to start adding cards.</p>
                     <button class="primary-button" data-page="database">
                         Explore Cards
                     </button>
-               </div>`;
+                </div>
+            `;
 
     document.querySelectorAll("#recent-cards [data-page]").forEach(button => {
 
         button.addEventListener("click", () => {
-            showPage(button.dataset.page);
+            showPage(button.dataset.page, null);
         });
 
     });
@@ -919,20 +1157,51 @@ function renderAll() {
 
 
 // ============================================
-// SEARCH LISTENER
+// SEARCH AND FILTER LISTENERS
 // ============================================
 
-document.getElementById("search-input").addEventListener("input", () => {
-    renderDatabase();
-});
+document.getElementById("search-input").addEventListener(
+    "input",
+    renderDatabase
+);
 
-document.getElementById("rarity-filter").addEventListener("change", () => {
-    renderDatabase();
-});
+
+document.getElementById("rarity-filter").addEventListener(
+    "change",
+    renderDatabase
+);
+
+
+document.getElementById("card-type-filter").addEventListener(
+    "change",
+    () => {
+
+        activeSeriesName = "";
+
+        updateSeriesFilter();
+
+        document.getElementById("series-filter").value = "";
+
+        renderDatabase();
+
+    }
+);
+
+
+document.getElementById("series-filter").addEventListener(
+    "change",
+    () => {
+
+        activeSeriesName = "";
+
+        renderDatabase();
+
+    }
+);
 
 
 // ============================================
-// INITIALIZE
+// INITIALIZE APPLICATION
 // ============================================
 
 async function initializeApp() {
@@ -943,9 +1212,12 @@ async function initializeApp() {
 
     try {
 
+        await loadSeries();
+
         await loadCards();
 
-        const { data, error } = await supabaseClient.auth.getSession();
+        const { data, error } =
+            await supabaseClient.auth.getSession();
 
         if (error) throw error;
 
@@ -959,12 +1231,19 @@ async function initializeApp() {
 
     } catch (error) {
 
-        console.error("Kayou Vault initialization error:", error);
+        console.error(
+            "Kayou Vault initialization error:",
+            error
+        );
 
-        alert("Kayou Vault could not load its data: " + error.message);
+        alert(
+            "Kayou Vault could not load its data: " +
+            error.message
+        );
 
     }
 
 }
+
 
 initializeApp();
