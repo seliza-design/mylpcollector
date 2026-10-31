@@ -72,7 +72,7 @@ async function loadSeries() {
 
     series = data || [];
 
-    updateSeriesFilter();
+    updateCatalogButtons();
 }
 
 
@@ -129,7 +129,7 @@ async function loadCards() {
 
     }));
 
-    updateSeriesFilter();
+    updateCatalogButtons();
 }
 
 
@@ -569,7 +569,7 @@ document.querySelectorAll("[data-page]").forEach(button => {
             document.getElementById("card-type-filter").value =
                 cardType;
 
-            updateSeriesFilter();
+            updateCatalogButtons();
 
             document.getElementById("series-filter").value = "";
 
@@ -982,6 +982,40 @@ async function removeWishlist(id) {
 // DATABASE SEARCH AND FILTERING
 // ============================================
 
+function updateCatalogButtons() {
+    const container = document.getElementById("collection-buttons");
+
+    if (!container) return;
+
+    const filteredSeries = series.filter(item => {
+        return activeCardType === "" || item.card_type === activeCardType;
+    });
+
+    if (filteredSeries.length === 0) {
+        container.innerHTML = '<p class="collection-placeholder">No collections available yet.</p>';
+        return;
+    }
+
+    container.innerHTML = filteredSeries.map(item => `
+        <button class="collection-button ${String(item.id) === String(activeSeriesId) ? "active" : ""}"
+                data-series-id="${item.id}">
+            ${escapeHTML(item.series_name)}
+        </button>
+    `).join("");
+
+    container.querySelectorAll(".collection-button").forEach(button => {
+        button.addEventListener("click", () => {
+            activeSeriesId = button.dataset.seriesId;
+            updateCatalogButtons();
+            renderDatabase();
+        });
+    });
+}
+
+
+
+
+
 function renderDatabase() {
 
     const search = document.getElementById("search-input")
@@ -1270,6 +1304,8 @@ async function initializeApp() {
         await loadCards();
 
         updateCatalogButtons();
+
+        renderDatabase();
 
         const { data, error } =
             await supabaseClient.auth.getSession();
