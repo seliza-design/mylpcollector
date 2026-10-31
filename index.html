@@ -21,60 +21,27 @@
 
     <div class="nav-label">MENU</div>
 
-    <nav>
-        <button class="nav-item active" data-page="home">⌂ Dashboard</button>
+   <nav>
+    <button class="nav-item active" data-page="home">
+        ⌂ Dashboard
+    </button>
 
-        <div class="nav-label">COLLECTIBLE CARDS</div>
+    <button class="nav-item" data-page="database">
+        ▦ Card Database
+    </button>
 
-        <button class="nav-item" data-page="database" data-card-type="collectible">
-            ▦ All Collectible Cards
-        </button>
+    <button class="nav-item" data-page="collection">
+        ▣ My Collection
+    </button>
 
-        <div class="nav-submenu">
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="collectible" data-series-name="Moon Edition">
-                Moon Edition
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="collectible" data-series-name="Rainbow Edition">
-                Rainbow Edition
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="collectible" data-series-name="Fun Moments Edition">
-                Fun Moments Edition
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="collectible" data-series-name="Star Edition">
-                Star Edition
-            </button>
-        </div>
+    <button class="nav-item" data-page="duplicates">
+        ⧉ Duplicates
+    </button>
 
-        <div class="nav-label">TRADING CARD GAME</div>
-
-        <button class="nav-item" data-page="database" data-card-type="tcg">
-            ▣ All TCG Cards
-        </button>
-
-        <div class="nav-submenu">
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="tcg" data-series-name="Friendships Begin">
-                Friendships Begin
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="tcg" data-series-name="Fantasy Wonderland">
-                Fantasy Wonderland
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="tcg" data-series-name="Discord!!!">
-                Discord!!!
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="tcg" data-series-name="Nightmare Night">
-                Nightmare Night
-            </button>
-            <button class="nav-item nav-subitem" data-page="database" data-card-type="tcg" data-series-name="Hearth's Warming Eve">
-                Hearth's Warming Eve
-            </button>
-        </div>
-
-        <div class="nav-label">MY VAULT</div>
-
-        <button class="nav-item" data-page="collection">▣ My Collection</button>
-        <button class="nav-item" data-page="duplicates">⧉ Duplicates</button>
-        <button class="nav-item" data-page="wishlist">♡ Wishlist</button>
-    </nav>
+    <button class="nav-item" data-page="wishlist">
+        ♡ Wishlist
+    </button>
+</nav>
 
     <div class="sidebar-bottom">
         <div class="sidebar-note">
@@ -167,47 +134,88 @@
 
         <section class="page" id="database">
 
-            <div class="page-heading">
-                <span class="eyebrow">EXPLORE THE CATALOG</span>
-                <h1>Card Database</h1>
-                <p>Browse Kayou My Little Pony collectible cards and TCG releases.</p>
+    <div class="page-heading">
+        <span class="eyebrow">EXPLORE THE CATALOG</span>
+        <h1>Card Database</h1>
+        <p>Browse Kayou My Little Pony collectible cards and TCG releases.</p>
+    </div>
+
+    <div class="search-area">
+
+        <input
+            type="text"
+            id="search-input"
+            placeholder="Search by character, card name, or card number..."
+        >
+
+        <select id="rarity-filter">
+            <option value="">All Rarities</option>
+            <option value="UR">UR</option>
+            <option value="SSR">SSR</option>
+            <option value="SR">SR</option>
+            <option value="R">R</option>
+        </select>
+
+    </div>
+
+    <div class="catalog-section">
+
+        <div class="section-heading">
+            <div>
+                <h2>Card Types</h2>
+                <p>Choose which type of cards you want to explore.</p>
             </div>
+        </div>
 
-            <div class="search-area">
+        <div class="catalog-type-buttons">
 
-                <input
-                    type="text"
-                    id="search-input"
-                    placeholder="Search by character, card name, or card number..."
-                >
+            <button class="catalog-type active" data-type="">
+                All Cards
+            </button>
 
-                <select id="card-type-filter">
-                    <option value="">All Card Types</option>
-                    <option value="collectible">Collectible Cards</option>
-                    <option value="tcg">Trading Card Game</option>
-                </select>
+            <button class="catalog-type" data-type="collectible">
+                ✧ Collectible Cards
+            </button>
 
-                <select id="series-filter">
-                    <option value="">All Collections</option>
-                </select>
+            <button class="catalog-type" data-type="tcg">
+                ♡ Trading Card Game
+            </button>
 
-                <select id="rarity-filter">
-                    <option value="">All Rarities</option>
-                    <option value="UR">UR</option>
-                    <option value="SSR">SSR</option>
-                    <option value="SR">SR</option>
-                    <option value="R">R</option>
-                </select>
+        </div>
 
+    </div>
+
+    <div class="catalog-section">
+
+        <div class="section-heading">
+            <div>
+                <h2>All Collections</h2>
+                <p>Select a collection to see its cards.</p>
             </div>
+        </div>
 
-            <p class="demo-notice">
-                ✦ Preview catalog — sample entries are placeholders, not verified Kayou card records.
+        <div id="collection-buttons" class="collection-buttons">
+
+            <p class="collection-placeholder">
+                Select a card type to browse its collections.
             </p>
 
-            <div id="database-grid" class="card-grid"></div>
+        </div>
 
-        </section>
+    </div>
+
+    <div class="catalog-results-heading">
+        <h2 id="catalog-results-title">All Cards</h2>
+        <span id="catalog-results-count"></span>
+    </div>
+
+    <p class="demo-notice">
+        ✦ Preview catalog — sample entries are placeholders, not verified Kayou card records.
+    </p>
+
+    <div id="database-grid" class="card-grid"></div>
+
+</section>
 
 
         <!-- MY COLLECTION -->
